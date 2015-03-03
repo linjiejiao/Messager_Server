@@ -37,6 +37,6 @@ public abstract class AbstractDatabase {
     public abstract int update(String table, Map<String, String> values, String whereClause,
             String[] whereArgs);
 
-    public abstract int executeSql(String sql, Object[] bindArgs);
+    public abstract boolean executeSql(String sql, Object[] bindArgs);
 
 }

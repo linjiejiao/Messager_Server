@@ -1,47 +1,38 @@
 
 package cn.ljj.server;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
+
+import cn.ljj.server.database.SqliteDatabase;
 
 public class Main {
     public static void main(String[] args) {
 //        ServerThread mServer = new ServerThread();
 //        new Thread(mServer).start();
 //        System.out.println("StartupInit init");
-
         try {
-            Class.forName("org.sqlite.JDBC");
-            Connection conn = DriverManager.getConnection("jdbc:sqlite:db/test.db");
-            Statement stat = conn.createStatement();
-            stat.executeUpdate("drop table if exists people;");
-            stat.executeUpdate("create table people (name, occupation);");
-            PreparedStatement prep = conn.prepareStatement("insert into people values (?, ?);");
-
-            prep.setString(1, "Gandhi");
-            prep.setString(2, "politics");
-            prep.addBatch();
-            prep.setString(1, "Wittgenstein");
-            prep.setString(2, "smartypants");
-            prep.addBatch();
-            prep.setString(1, "Turing");
-            prep.setString(2, "computers");
-            prep.addBatch();
-
-            conn.setAutoCommit(false);
-            prep.executeBatch();
-            conn.setAutoCommit(true);
-            ResultSet rs = stat.executeQuery("select * from people;");
+            SqliteDatabase db = new SqliteDatabase();
+            db.open("db/test.db");
+//            ResultSet rs = db.rawQuery("select * from people where name=? or name=? order by name"
+//                    , new String[]{"'Turing'", "'Wittgenstein'"});
+//            ResultSet rs = db.query("people", new String[]{"name", "occupation"},
+//                    "name=? or name=?", new String[]{"'Turing'", "'Wittgenstein'"},
+//                    null, null, null);
+//            db.delete("people", "name=?", new String[]{"'Wittgenstein'"});
+            Map <String, String> values = new HashMap<String, String>();
+            values.put("name", "'jiajian'");
+            values.put("occupation", "'11111112'");
+//            db.insert("people", values);
+            db.update("people", values, "name=?", new String[]{"'Gandhi'"});
+            ResultSet rs = db.rawQuery("select * from people "
+                  , null);
             while (rs.next()) {
                 System.out.println("name = " + rs.getString("name"));
                 System.out.println("job = " + rs.getString("occupation"));
             }
             rs.close();
-            conn.close();
         } catch (Exception e) {
             e.printStackTrace();
         }

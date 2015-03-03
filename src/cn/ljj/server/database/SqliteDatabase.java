@@ -9,10 +9,17 @@ import java.sql.Statement;
 import java.util.Map;
 import java.util.Set;
 
+import cn.ljj.server.log.Log;
+
 public class SqliteDatabase extends AbstractDatabase {
+    public static final String TAG = "SqliteDatabase";
     private Connection mConnection = null;
     private Statement mStatement = null;
 
+    private boolean isDebugSQL(){
+        return true;
+    }
+  
     public SqliteDatabase() throws Exception {
         Class.forName("org.sqlite.JDBC");
     }
@@ -59,29 +66,13 @@ public class SqliteDatabase extends AbstractDatabase {
             for (String col : columns) {
                 sql.append(col).append(", ");
             }
-            sql.delete(sql.length() - 2, sql.length()); // delete the last ", "
+            // delete the last", "
+            sql.delete(sql.length() - 2, sql.length());
         }
         sql.append(" from ").append(table);
         if (selection != null) {
             sql.append(" where ");
-            if (selectionArgs == null || selectionArgs.length == 0) {
-                sql.append(selection);
-            } else {
-                if (selection.charAt(selection.length() - 1) == '?') {
-                    selection += " ";
-                }
-                String[] sels = selection.split("\\?");
-                if (sels == null || sels.length <= 1) {
-                    sql.append(selection);
-                } else {
-                    int length = sels.length - 1 < selectionArgs.length ? sels.length - 1
-                            : selectionArgs.length;
-                    for (int i = 0; i < length; i++) {
-                        sql.append(sels[i]).append(selectionArgs[i]);
-                    }
-                    sql.append(sels[length]);
-                }
-            }
+            sql.append(fillArgs(selection, selectionArgs));
         }
         if (groupBy != null && !groupBy.isEmpty()) {
             sql.append(" group by ").append(groupBy);
@@ -95,6 +86,9 @@ public class SqliteDatabase extends AbstractDatabase {
         sql.append(";");
         ResultSet rs = null;
         try {
+            if( isDebugSQL()){
+            Log.i(TAG, "query full sql=" + sql.toString());
+            }
             rs = mStatement.executeQuery(sql.toString());
         } catch (SQLException e) {
             e.printStackTrace();
@@ -104,8 +98,43 @@ public class SqliteDatabase extends AbstractDatabase {
 
     @Override
     public ResultSet rawQuery(String sql, String[] selectionArgs) {
-        // TODO Auto-generated method stub
-        return null;
+        ResultSet rs = null;
+        try {
+            String fullSql = fillArgs(sql, selectionArgs);
+            if( isDebugSQL()){
+                Log.i(TAG, "rawQuery full sql=" + fullSql);
+            }
+            rs = mStatement.executeQuery(fullSql);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return rs;
+    }
+
+    private String fillArgs(String selection, String[] selectionArgs) {
+        StringBuilder builder = new StringBuilder();
+        if (selectionArgs == null || selectionArgs.length == 0) {
+            builder.append(selection);
+        } else {
+            boolean appendSpace = false;
+            if (selection.charAt(selection.length() - 1) == '?') {
+                selection += " ";
+                appendSpace = true;
+            }
+            String[] sels = selection.split("\\?");
+            if (sels == null || sels.length <= 1) {
+                builder.append(selection);
+            } else {
+                int length = Math.min(sels.length - 1, selectionArgs.length);
+                for (int i = 0; i < length; i++) {
+                    builder.append(sels[i]).append(selectionArgs[i]);
+                }
+                if (!appendSpace) {
+                    builder.append(sels[length]);
+                }
+            }
+        }
+        return builder.toString();
     }
 
     @Override
@@ -125,12 +154,10 @@ public class SqliteDatabase extends AbstractDatabase {
             keyString.append(key).append(", ");
             valueString.append(value).append(", ");
         }
-        keyString.delete(keyString.length() - 2, keyString.length()); // delete
-                                                                      // the
-                                                                      // last
-                                                                      // ", "
+        // delete the last", "
+        keyString.delete(keyString.length() - 2, keyString.length()); 
         keyString.append(") ");
-        valueString.delete(keyString.length() - 2, keyString.length());
+        valueString.delete(valueString.length() - 2, valueString.length());
         valueString.append(");");
         StringBuilder sql = new StringBuilder("insert into ");
         sql.append(table);
@@ -138,6 +165,9 @@ public class SqliteDatabase extends AbstractDatabase {
         sql.append("values");
         sql.append(valueString);
         try {
+            if( isDebugSQL()){
+                Log.i(TAG, "insert full sql=" + sql.toString());
+            }
             ret = mStatement.executeUpdate(sql.toString());
         } catch (SQLException e) {
             e.printStackTrace();
@@ -147,21 +177,68 @@ public class SqliteDatabase extends AbstractDatabase {
 
     @Override
     public int delete(String table, String whereClause, String[] whereArgs) {
-        // TODO Auto-generated method stub
-        return 0;
+        int ret = -1;
+        StringBuilder sql = new StringBuilder("delete from ");
+        sql.append(table);
+        if (whereClause != null) {
+            sql.append(" where ");
+            sql.append(fillArgs(whereClause, whereArgs));
+        }
+        try {
+            if( isDebugSQL()){
+                Log.i(TAG, "delete full sql=" + sql.toString());
+            }
+            ret = mStatement.executeUpdate(sql.toString());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return ret;
     }
 
     @Override
     public int update(String table, Map<String, String> values, String whereClause,
             String[] whereArgs) {
-        // TODO Auto-generated method stub
-        return 0;
+        int ret = -1;
+        StringBuilder sql = new StringBuilder("update ");
+        sql.append(table);
+        sql.append(" set ");
+        Set<String> keySet = values.keySet();
+        for(String key : keySet){
+            sql.append(key);
+            sql.append('=');
+            sql.append(values.get(key));
+            sql.append(", ");
+        }
+        // delete the last", "
+        sql.delete(sql.length() - 2, sql.length());
+        if (whereClause != null) {
+            sql.append(" where ");
+            sql.append(fillArgs(whereClause, whereArgs));
+        }
+        try {
+            if( isDebugSQL()){
+                Log.i(TAG, "update full sql=" + sql.toString());
+            }
+            ret = mStatement.executeUpdate(sql.toString());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return ret;
     }
 
     @Override
-    public int executeSql(String sql, Object[] bindArgs) {
-        // TODO Auto-generated method stub
-        return 0;
+    public boolean executeSql(String sql, Object[] bindArgs) {
+        boolean ret = false;
+        try {
+            String fullSql = fillArgs(sql, bindArgs);
+            if( isDebugSQL()){
+                Log.i(TAG, "rawQuery full sql=" + fullSql);
+            }
+            ret = mStatement.execute(fullSql);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ret;
     }
 
 }
