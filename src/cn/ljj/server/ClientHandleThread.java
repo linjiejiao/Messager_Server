@@ -108,7 +108,7 @@ public class ClientHandleThread implements Runnable {
 			List<ClientHandleThread> clients = ServerThread.getAllClients();
 			synchronized (clients) {
 				for(ClientHandleThread client : clients){
-					if(client.getUser().getName().equals(msg.getTo())){
+					if(client.getUser().getIdentity() == msg.getToId()){
 						boolean ret = client.writeToClient(MessageComposer.composeMessage(msg));
 						System.out.println("handleMessage client found write ret=" + ret);
 					}

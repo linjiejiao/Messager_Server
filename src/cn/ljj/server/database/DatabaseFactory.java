@@ -1,28 +1,17 @@
 
 package cn.ljj.server.database;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import cn.ljj.server.config.Config;
+import cn.ljj.server.database.TableDefines.*;
 
 public class DatabaseFactory {
     public static final int DATABASE_TYPE_SQLITE = 0;
     public static final int DATABASE_TYPE_BAIDU_MYSQL = 1;
 
-    public static final String SQL_CRAETE_ADMIN_TABLE = "create table if not exists admin ("
-            + Admin.IDENTITY +" integer primary key, "
-            + Admin.NAME + " varchar, "
-            + Admin.PASSWORD + " varchar, "
-            + Admin.AUTHORITY + " varchar);";
 
-    public static final String SQL_CRAETE_USER_TABLE = "create table if not exists user ("
-            + User.IDENTITY +" integer primary key, "
-            + User.NAME + " varchar, "
-            + User.PASSWORD + " varchar);";
-
-    public static final String SQL_CRAETE_MESSAGE_TABLE = "create table if not exists message ("
-            + User.IDENTITY +" integer primary key, "
-            + User.NAME + " varchar, "
-            + User.PASSWORD + " varchar);";
-    
     public static AbstractDatabase getDatabase() {
         try {
             switch (Config.DATABASE_TYPE) {
@@ -38,25 +27,39 @@ public class DatabaseFactory {
     }
 
     public static void crateTables(AbstractDatabase db) {
-//        db.executeSql(sql, null);
+        for(String sql : TableDefines.INITIAL_SQLS){
+            db.executeSql(sql, null);
+        }
     }
     
-    public class Admin{
-        public static final String IDENTITY = "identity";
-        public static final String NAME = "name";
-        public static final String PASSWORD = "password";
-        public static final String AUTHORITY = "authority";
-    }
-    
-    public class User{
-        public static final String IDENTITY = "identity";
-        public static final String NAME = "name";
-        public static final String PASSWORD = "password";
-    }
-    
-    public class Message{
-        public static final String IDENTITY = "identity";
-        public static final String DESTINATION = "destination";
-        public static final String SOURCE = "source";
+    public static void initDatabaseData(AbstractDatabase db){
+        //admin
+        Map <String, Object> values = new HashMap<String, Object>();
+        values.put(AdminColunms.NAME, "admin");
+        values.put(AdminColunms.PASSWORD, "admin");
+        values.put(AdminColunms.IDENTITY, 88888);
+        db.insert(AdminColunms.TABLE_NAME, values);
+        //users
+        values = new HashMap<String, Object>();
+        values.put(UserColunms.IDENTITY, 123);
+        values.put(UserColunms.NAME, "name_123");
+        values.put(UserColunms.PASSWORD, "123");
+        db.insert(UserColunms.TABLE_NAME, values);
+        values = new HashMap<String, Object>();
+        values.put(UserColunms.IDENTITY, 456);
+        values.put(UserColunms.NAME, "name_456");
+        values.put(UserColunms.PASSWORD, "456");
+        db.insert(UserColunms.TABLE_NAME, values);
+        values = new HashMap<String, Object>();
+        values.put(UserColunms.IDENTITY, 789);
+        values.put(UserColunms.NAME, "name_789");
+        values.put(UserColunms.PASSWORD, "789");
+        db.insert(UserColunms.TABLE_NAME, values);
+        values = new HashMap<String, Object>();
+        values.put(UserColunms.IDENTITY, 888);
+        values.put(UserColunms.NAME, "abc");
+        values.put(UserColunms.PASSWORD, "abc");
+        db.insert(UserColunms.TABLE_NAME, values);
+        //no message
     }
 }

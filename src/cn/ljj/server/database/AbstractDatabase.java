@@ -13,7 +13,7 @@ public abstract class AbstractDatabase {
     protected Statement mStatement = null;
 
     private boolean isDebugSQL() {
-        return false;
+        return true;
     }
 
     public abstract boolean open(String location);
