@@ -18,11 +18,24 @@ public class TableDefines {
         public static final String FROM_NAME = "from_name";
         public static final String TO_ID = "to_id";
         public static final String TO_NAME = "to_name";
+        public static final String DATE = "date";
         public static final String MSG_ID = "msg_id";
         public static final String MSG_TYPE = "msg_type";
         public static final String MSG_BODY = "msg_body";
         public static final String MSG_INDEX = "msg_index";
         public static final String TRANSACTION_ID = "transaction_id";
+        
+        public static final int INFDEX_ID = 0;
+        public static final int INFDEX_FROM_ID = 1;
+        public static final int INFDEX_FROM_NAME = 2;
+        public static final int INFDEX_TO_ID = 3;
+        public static final int INFDEX_TO_NAME = 4;
+        public static final int INFDEX_DATE = 5;
+        public static final int INFDEX_MSG_ID = 6;
+        public static final int INFDEX_MSG_TYPE = 7;
+        public static final int INFDEX_MSG_BODY = 8;
+        public static final int INFDEX_MSG_INDEX = 9;
+        public static final int INFDEX_TRANSACTION_ID = 10;
     }
     
     public class UserColunms{
@@ -52,12 +65,13 @@ public class TableDefines {
             + MessageColunms.TABLE_NAME + " ("
             + MessageColunms._ID +" integer primary key autoincrement, "
             + MessageColunms.FROM_ID + " integer, "
-             + MessageColunms.FROM_NAME + " varchar, "
+            + MessageColunms.FROM_NAME + " varchar, "
             + MessageColunms.TO_ID + " integer not null, "
             + MessageColunms.TO_NAME + " varchar, "
+            + MessageColunms.DATE + " varchar, "
             + MessageColunms.MSG_ID + " integer, "
             + MessageColunms.MSG_TYPE + " integer, "
-            + MessageColunms.MSG_BODY + " varchar, "
+            + MessageColunms.MSG_BODY + " blob, "
             + MessageColunms.MSG_INDEX + " integer, "
             + MessageColunms.TRANSACTION_ID + " integer);";
     

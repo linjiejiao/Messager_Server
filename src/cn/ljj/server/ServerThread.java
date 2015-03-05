@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class ServerThread implements Runnable{
-	private static List<ClientHandleThread> sClients = new ArrayList<ClientHandleThread>();
+	private Map<Integer, ClientHandleThread> mClients = new HashMap<Integer, ClientHandleThread>();
+	
 	private boolean isRunning = false;
 	ServerSocket mServer;
 	@Override
@@ -21,11 +23,11 @@ public class ServerThread implements Runnable{
 			while (isRunning) {
 				try {
 					Socket s = mServer.accept();
-					ClientHandleThread client = new ClientHandleThread(s);
+					ClientHandleThread client = new ClientHandleThread(s, this);
 					new Thread(client).start();
-					synchronized (sClients) {
-						sClients.add(client);
-					}
+//					synchronized (sClients) {
+//						sClients.add(client);
+//					}
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -42,15 +44,16 @@ public class ServerThread implements Runnable{
 	
 	public void stop(){
 		isRunning = false;
-		synchronized (sClients) {
-			for(ClientHandleThread c : sClients){
-				c.stop();
+		synchronized (mClients) {
+		    Set<Integer> ids = mClients.keySet();
+			for(int id : ids){
+			    mClients.get(id).stop();
 			}
-			sClients.clear();
+			mClients.clear();
 		}
 	}
 	
-	public static List<ClientHandleThread> getAllClients(){
-		return sClients;
+	public Map<Integer, ClientHandleThread> getAllClients(){
+		return mClients;
 	}
 }

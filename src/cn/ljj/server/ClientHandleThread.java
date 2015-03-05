@@ -4,8 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.List;
-
+import java.util.Map;
 import cn.ljj.message.Headers;
 import cn.ljj.message.IPMessage;
 import cn.ljj.message.composerparser.MessageComposer;
@@ -19,9 +18,13 @@ public class ClientHandleThread implements Runnable {
 	private boolean isRunning = false;
 	private OutputStream mOutputStream;
 	private User mUser;
+	private ServerThread mServer = null;
+	private Map<Integer, ClientHandleThread> mClients;
 
-	public ClientHandleThread(Socket s) {
+	public ClientHandleThread(Socket s, ServerThread server) {
 		mSocket = s;
+		mServer = server;
+		mClients = mServer.getAllClients();
 		if (s == null) {
 			throw new NullPointerException();
 		}
@@ -61,9 +64,10 @@ public class ClientHandleThread implements Runnable {
 				e.printStackTrace();
 			}
 			isRunning = false;
-			List<ClientHandleThread> clients = ServerThread.getAllClients();
-			synchronized (clients) {
-				clients.remove(this);
+			if(mUser != null){
+    			synchronized (mClients) {
+    			    mClients.remove(mUser.getIdentity());
+    			}
 			}
 		}
 	}
@@ -99,20 +103,23 @@ public class ClientHandleThread implements Runnable {
 			User user = UserParser.parseUser(msg.getBody());
 			if(LogInAuthority.getInstance().authorize(user)){
 				mUser = user;
+	            synchronized (mClients) {
+	                mClients.remove(mUser.getIdentity());
+	            }
 			}else{
 				throw new Exception("Authorize failed");
 			}
 			break;
 		case Headers.MESSAGE_TYPE_MESSAGE:
 			System.out.println("handleMessage MESSAGE_TYPE_MESSAGE");
-			List<ClientHandleThread> clients = ServerThread.getAllClients();
-			synchronized (clients) {
-				for(ClientHandleThread client : clients){
-					if(client.getUser().getIdentity() == msg.getToId()){
-						boolean ret = client.writeToClient(MessageComposer.composeMessage(msg));
-						System.out.println("handleMessage client found write ret=" + ret);
-					}
-				}
+			synchronized (mClients) {
+				ClientHandleThread target = mClients.get(msg.getToId());
+                if(target != null){
+                    boolean ret = target.writeToClient(MessageComposer.composeMessage(msg));
+                    System.out.println("handleMessage client found write ret=" + ret);
+                }else{
+                    //write to db.
+                }
 			}
 			break;
 		case Headers.MESSAGE_TYPE_RESPOND:

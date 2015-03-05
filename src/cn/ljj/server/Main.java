@@ -3,9 +3,6 @@ package cn.ljj.server;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.util.HashMap;
-import java.util.Map;
 
 import cn.ljj.message.Headers;
 import cn.ljj.message.IPMessage;
@@ -13,7 +10,7 @@ import cn.ljj.message.composerparser.MessageComposer;
 import cn.ljj.message.composerparser.MessageParser;
 import cn.ljj.message.composerparser.UserComposer;
 import cn.ljj.message.composerparser.UserParser;
-import cn.ljj.server.database.DatabaseFactory;
+import cn.ljj.server.database.DatabasePersister;
 import cn.ljj.server.database.SqliteDatabase;
 import cn.ljj.server.log.Log;
 import cn.ljj.user.User;
@@ -57,6 +54,7 @@ public class Main {
             msg.setFromId(user.getIdentity());
             msg.setToId(8888);
             msg.setMessageId(999);
+            DatabasePersister.getInstance().persistNewMessage(msg, db);
             try {
                 Log.i(TAG, "msg before=" + msg);
                 Log.i(TAG, "msg after="
