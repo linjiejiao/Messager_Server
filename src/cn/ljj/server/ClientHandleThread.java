@@ -7,11 +7,11 @@ import java.net.Socket;
 import java.util.Map;
 import cn.ljj.message.Headers;
 import cn.ljj.message.IPMessage;
+import cn.ljj.message.User;
 import cn.ljj.message.composerparser.MessageComposer;
 import cn.ljj.message.composerparser.MessageParser;
 import cn.ljj.message.composerparser.UserParser;
-import cn.ljj.user.LogInAuthority;
-import cn.ljj.user.User;
+import cn.ljj.server.authority.LogInAuthority;
 
 public class ClientHandleThread implements Runnable {
 	private Socket mSocket;
@@ -104,7 +104,7 @@ public class ClientHandleThread implements Runnable {
 			if(LogInAuthority.getInstance().authorize(user)){
 				mUser = user;
 	            synchronized (mClients) {
-	                mClients.remove(mUser.getIdentity());
+	                mClients.put(mUser.getIdentity(), this);
 	            }
 			}else{
 				throw new Exception("Authorize failed");

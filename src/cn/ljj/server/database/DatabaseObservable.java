@@ -20,6 +20,7 @@ public class DatabaseObservable {
         }
         mObsers.remove(observer);
     }
+
     public void notifyDatabaseChanged(String table, int id, Object obj) {
         for (IDatabaseObserver o : mObsers) {
             o.onDatabaseChanged(table, id, obj);
@@ -27,7 +28,11 @@ public class DatabaseObservable {
     }
 
     public interface IDatabaseObserver {
-        public void onDatabaseChanged(String table, int id, Object obj);
+        public static final int OPERATE_INSERT = 0;
+        public static final int OPERATE_DELETE = 1;
+        public static final int OPERATE_UPDATE = 2;
+
+        public void onDatabaseChanged(String table, int operate, Object obj);
     }
 
 }
