@@ -5,10 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
-
-import cn.ljj.message.Headers;
 import cn.ljj.message.IPMessage;
 import cn.ljj.message.User;
+import cn.ljj.server.config.Config;
 import cn.ljj.server.database.TableDefines.*;
 import cn.ljj.server.log.Log;
 
@@ -19,7 +18,7 @@ public class DatabasePersister extends DatabaseObservable {
 
     private DatabasePersister() {
         mDatabase = DatabaseFactory.getDatabase();
-        mDatabase.open("db/database.db");
+        mDatabase.open(Config.DATABASE_LOCATION);
     }
 
     @Override
@@ -56,6 +55,7 @@ public class DatabasePersister extends DatabaseObservable {
                 + "values(?,?,?,?,?,?,?,?,?,?);");
         PreparedStatement prep = null;
         try {
+            // insert
             prep = mDatabase.getConnection().prepareStatement(sql);
             prep.setInt(MessageColunms.INFDEX_FROM_ID, msg.getFromId());
             prep.setString(MessageColunms.INFDEX_FROM_NAME, msg.getFromName());
@@ -68,6 +68,7 @@ public class DatabasePersister extends DatabaseObservable {
             prep.setInt(MessageColunms.INFDEX_MSG_INDEX, msg.getMessageIndex());
             prep.setInt(MessageColunms.INFDEX_TRANSACTION_ID, msg.getTransactionId());
             ret = prep.executeUpdate() > 0;
+            // notify
             if (ret) {
                 notifyDatabaseChanged(MessageColunms.TABLE_NAME,
                         IDatabaseObserver.OPERATE_INSERT, msg);
@@ -84,12 +85,14 @@ public class DatabasePersister extends DatabaseObservable {
         if (!checkUser(user)) {
             return ret;
         }
+        // insert
         Map<String, Object> values = new HashMap<String, Object>();
         values.put(UserColunms.IDENTITY, user.getIdentity());
         values.put(UserColunms.NAME, user.getName());
         values.put(UserColunms.PASSWORD, user.getPassword());
         values.put(UserColunms.STATUS, user.getStatus());
         ret = mDatabase.insert(UserColunms.TABLE_NAME, values) > 0;
+        // notify
         if (ret) {
             notifyDatabaseChanged(UserColunms.TABLE_NAME,
                     IDatabaseObserver.OPERATE_INSERT, user);
@@ -201,7 +204,7 @@ public class DatabasePersister extends DatabaseObservable {
         String fromName = null;
         String toName = null;
         String date = null;
-        int messageType = Headers.MESSAGE_TYPE_BASE;
+        int messageType = IPMessage.MESSAGE_TYPE_NONE;
         int messageIndex = -1;
         int messageId = -1;
         int transactionId = 0;

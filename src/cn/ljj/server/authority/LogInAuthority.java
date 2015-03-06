@@ -1,25 +1,80 @@
+
 package cn.ljj.server.authority;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import cn.ljj.message.User;
+import cn.ljj.server.config.Config;
+import cn.ljj.server.database.AbstractDatabase;
+import cn.ljj.server.database.DatabaseFactory;
+import cn.ljj.server.database.DatabasePersister;
+import cn.ljj.server.database.TableDefines.UserColunms;
+import cn.ljj.server.log.Log;
 
 public class LogInAuthority {
+    public static final String TAG = "LogInAuthority";
     private static LogInAuthority sInstance;
-	public static final String TAG = "LogInAuthority";
-	private LogInAuthority() {
 
-	}
+    private AbstractDatabase mDatabase = null;
 
-	public static LogInAuthority getInstance() {
-		if (sInstance == null) {
-			sInstance = new LogInAuthority();
-		}
-		return sInstance;
-	}
-	
-	public boolean authorize(User user ){
-		System.out.println(TAG  + " authorize:" + user);
-		return true;
-	}
-	
-	
+    private LogInAuthority() {
+        mDatabase = DatabaseFactory.getDatabase();
+        mDatabase.open(Config.DATABASE_LOCATION);
+    }
+
+    public static LogInAuthority getInstance() {
+        if (sInstance == null) {
+            sInstance = new LogInAuthority();
+        }
+        return sInstance;
+    }
+
+    public boolean authorize(User user) {
+        Log.i(TAG, " authorize:" + user);
+        boolean ret = false;
+        ResultSet rs = null;
+        try {
+            rs = getUserById(user.getIdentity());
+            User dbUser = DatabasePersister.getInstance().getUser(rs);
+            if (user.equals(dbUser)) {
+                ret = true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                rs.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return ret;
+    }
+
+    public boolean isUserExist(int id) {
+        boolean ret = false;
+        ResultSet rs = null;
+        try {
+            rs = getUserById(id);
+            if (rs.next()) {
+                ret = true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                rs.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return ret;
+    }
+
+    private ResultSet getUserById(int id) {
+        String sql = "select * from " + UserColunms.TABLE_NAME + " where " + UserColunms.IDENTITY
+                + "=" + id;
+        return mDatabase.rawQuery(sql, null);
+    }
 }

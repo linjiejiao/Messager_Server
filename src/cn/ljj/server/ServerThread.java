@@ -5,19 +5,33 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
+import cn.ljj.message.IPMessage;
+import cn.ljj.message.User;
+import cn.ljj.message.composerparser.MessageComposer;
+import cn.ljj.server.ClientConnPool.IUserStatusChangerListner;
+import cn.ljj.server.database.AbstractDatabase;
 import cn.ljj.server.database.DatabaseObservable.IDatabaseObserver;
+import cn.ljj.server.database.DatabaseFactory;
 import cn.ljj.server.database.DatabasePersister;
+import cn.ljj.server.database.TableDefines.MessageColunms;
+import cn.ljj.server.log.Log;
 
-public class ServerThread implements Runnable, IDatabaseObserver {
-    private Map<Integer, ClientHandleThread> mClients = new HashMap<Integer, ClientHandleThread>();
+public class ServerThread implements Runnable, IDatabaseObserver, IUserStatusChangerListner {
+    public static final String TAG = "ServerThread";
 
+    private ClientConnPool mClients = new ClientConnPool();
     private boolean isRunning = false;
-    ServerSocket mServer;
+    private ServerSocket mServer;
+    private AbstractDatabase mDatabase = null;
 
+    private void init(){
+        DatabasePersister.getInstance().registerObserver(this);
+        mClients.addUserStatusChangerListner(this);
+        mDatabase = DatabaseFactory.getDatabase();
+    }
+    
     @Override
     public void run() {
         isRunning = true;
@@ -25,7 +39,7 @@ public class ServerThread implements Runnable, IDatabaseObserver {
             mServer = new ServerSocket();
             InetSocketAddress inetAddr = new InetSocketAddress(8888);
             mServer.bind(inetAddr);
-            DatabasePersister.getInstance().registerObserver(this);
+            init();
             while (isRunning) {
                 try {
                     Socket s = mServer.accept();
@@ -57,12 +71,66 @@ public class ServerThread implements Runnable, IDatabaseObserver {
         }
     }
 
-    public Map<Integer, ClientHandleThread> getAllClients() {
+    public ClientConnPool getAllClients() {
         return mClients;
     }
 
     @Override
     public void onDatabaseChanged(String table, int operate, Object obj) {
+        switch (operate) {
+            case IDatabaseObserver.OPERATE_DELETE:
+                Log.d(TAG, "onDatabaseChanged delete from " + table + "; obj=" + obj);
+                break;
+            case IDatabaseObserver.OPERATE_INSERT:
+                Log.d(TAG, "onDatabaseChanged insert into " + table + "; obj=" + obj);
+                if (MessageColunms.TABLE_NAME.equals(table) && obj instanceof IPMessage) {
+                    transmitMessage((IPMessage) obj);
+                }
+                break;
+            case IDatabaseObserver.OPERATE_UPDATE:
+                Log.d(TAG, "onDatabaseChanged update " + table + "; obj=" + obj);
+                break;
+        }
+    }
+
+    @Override
+    public void onUserStatusChanged(int oldStatus, int newStataus, User user) {
+        if(oldStatus == User.STATUS_OFF_LINE && newStataus == User.STATUS_ON_LINE){
+            if(user != null){
+                sendOfflineMsg(user);
+            }
+        }else if(oldStatus == User.STATUS_OFF_LINE && newStataus == User.STATUS_ON_LINE){
+            if(user != null){
+                // notify user off line
+            }else{
+                // notify all user offline
+            }
+        }
         
+    }
+
+    private void transmitMessage(IPMessage msg) {
+        ClientHandleThread target = mClients.get(msg.getToId());
+        if (target != null) {
+            boolean succ = false;
+            try {
+                succ = target.writeToTarget(MessageComposer.composeMessage(msg));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (succ) {
+                DatabasePersister.getInstance().deleteMessage(msg);
+            } else {
+                Log.e(TAG, "transmitMessageAndRespon failed!");
+            }
+        } else {
+            Log.i(TAG, "transmitMessageAndRespon target user offline!");
+            // Target is off line, message had been stored in database.
+            // And will be sent when target user login.
+        }
+    }
+
+    private void sendOfflineMsg(User target){
+        mDatabase
     }
 }
