@@ -22,23 +22,24 @@ public class ClientConnPool {
 
     public void clear() {
         mClients.clear();
-        notifyUserStatusChanged(User.STATUS_ON_LINE,
-                User.STATUS_OFF_LINE, null);
+        notifyUserStatusChanged(User.STATUS_ON_LINE, User.STATUS_OFF_LINE, null);
     }
 
     public void remove(int identity) {
         ClientHandleThread client = mClients.remove(identity);
-        notifyUserStatusChanged(client.getUser().getStatus(), User.STATUS_OFF_LINE, client.getUser());
+        User user = client.getUser();
+        user.setStatus(User.STATUS_OFF_LINE);
+        notifyUserStatusChanged(User.STATUS_ON_LINE, User.STATUS_OFF_LINE, user);
     }
 
     public void put(int identity, ClientHandleThread clientHandleThread) {
         mClients.put(identity, clientHandleThread);
-        notifyUserStatusChanged(User.STATUS_OFF_LINE,
-                clientHandleThread.getUser().getStatus(), clientHandleThread.getUser());
+        notifyUserStatusChanged(User.STATUS_OFF_LINE, User.STATUS_ON_LINE,
+                clientHandleThread.getUser());
     }
 
-    public void notifyUserStatusChanged(int oldStatus, int newStataus, User user){
-        for(IUserStatusChangerListner i: mListners){
+    public void notifyUserStatusChanged(int oldStatus, int newStataus, User user) {
+        for (IUserStatusChangerListner i : mListners) {
             i.onUserStatusChanged(oldStatus, newStataus, user);
         }
     }

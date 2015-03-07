@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import cn.ljj.message.IPMessage;
 import cn.ljj.message.User;
-import cn.ljj.server.config.Config;
 import cn.ljj.server.database.TableDefines.*;
 import cn.ljj.server.log.Log;
 
@@ -18,7 +17,6 @@ public class DatabasePersister extends DatabaseObservable {
 
     private DatabasePersister() {
         mDatabase = DatabaseFactory.getDatabase();
-        mDatabase.open(Config.DATABASE_LOCATION);
     }
 
     @Override

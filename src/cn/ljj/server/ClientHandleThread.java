@@ -1,15 +1,18 @@
 
 package cn.ljj.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.List;
 
 import cn.ljj.message.IPMessage;
 import cn.ljj.message.User;
 import cn.ljj.message.composerparser.MessageComposer;
 import cn.ljj.message.composerparser.MessageParser;
+import cn.ljj.message.composerparser.UserComposer;
 import cn.ljj.message.composerparser.UserParser;
 import cn.ljj.server.authority.LogInAuthority;
 import cn.ljj.server.database.DatabasePersister;
@@ -18,12 +21,12 @@ import cn.ljj.server.log.Log;
 public class ClientHandleThread implements Runnable {
     public static final String TAG = "ClientHandleThread";
 
-    private Socket mSocket;
+    private Socket mSocket = null;
     private boolean isRunning = false;
-    private OutputStream mOutputStream;
-    private User mUser;
+    private OutputStream mOutputStream = null;
+    private User mUser = null;
     private ServerThread mServer = null;
-    private ClientConnPool mClients;
+    private ClientConnPool mClients = null;
     private DatabasePersister mDatabasePersister = null;
     private int mMsgIndex = 0;
     private int mTransactionIndex = 0;
@@ -72,9 +75,9 @@ public class ClientHandleThread implements Runnable {
                 e.printStackTrace();
             }
             isRunning = false;
-            if (mUser != null) {
+            if (getUser() != null) {
                 synchronized (mClients) {
-                    mClients.remove(mUser.getIdentity());
+                    mClients.remove(getUser().getIdentity());
                 }
             }
         }
@@ -104,9 +107,9 @@ public class ClientHandleThread implements Runnable {
                 User user = UserParser.parseUser(msg.getBody());
                 if (LogInAuthority.getInstance().authorize(user)) {
                     mUser = user;
-                    Log.d(TAG , "handleMessage MESSAGE_TYPE_LOGIN user=" + user);
+                    Log.d(TAG, "handleMessage MESSAGE_TYPE_LOGIN user=" + user);
                     synchronized (mClients) {
-                        mClients.put(mUser.getIdentity(), this);
+                        mClients.put(user.getIdentity(), this);
                     }
                 } else {
                     responLoginFailed();
@@ -115,9 +118,34 @@ public class ClientHandleThread implements Runnable {
                 break;
             case IPMessage.MESSAGE_TYPE_MESSAGE:
             case IPMessage.MESSAGE_TYPE_RESPOND:
+                if (getUser() == null) { // Did not login yet
+                    return;
+                }
                 if (LogInAuthority.getInstance().isUserExist(msg.getToId())) {
                     mDatabasePersister.persistNewMessage(msg);
                 }
+                break;
+            case IPMessage.MESSAGE_TYPE_CHANGE_STATUS:
+                if (getUser() == null) { // Did not login yet
+                    return;
+                }
+                User newUser = UserParser.parseUser(msg.getBody());
+                if (getUser().equals(newUser)) {
+                    boolean update = mDatabasePersister.updateUser(newUser);
+                    if (!update) {
+                        responChangeStatusFailed();
+                    }
+                }
+                break;
+            case IPMessage.MESSAGE_TYPE_GET_USERS:
+                if (getUser() == null) { // Did not login yet
+                    return;
+                }
+                msg.setDate(System.currentTimeMillis() + "");
+                msg.setMessageIndex(++mMsgIndex);
+                msg.setBody(getAllUserStatus());
+                byte[] data = MessageComposer.composeMessage(msg);
+                writeToTarget(data);
                 break;
             default:
         }
@@ -131,12 +159,16 @@ public class ClientHandleThread implements Runnable {
         respon("Login Failed");
     }
 
+    private void responChangeStatusFailed() {
+        respon("Change status Failed");
+    }
+
     public void respon(String resp) {
         IPMessage msg = new IPMessage();
         msg.setBody(resp.getBytes());
         msg.setDate(System.currentTimeMillis() + "");
         msg.setFromId(0);
-        msg.setToId(mUser.getIdentity());
+        msg.setToId(getUser().getIdentity());
         msg.setMessageId(0);
         msg.setMessageIndex(++mMsgIndex);
         msg.setMessageType(IPMessage.MESSAGE_TYPE_RESPOND);
@@ -146,6 +178,28 @@ public class ClientHandleThread implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private byte[] getAllUserStatus() {
+        byte[] bytes = new byte[0];
+        ByteArrayOutputStream baos = null;
+        try {
+            baos = new ByteArrayOutputStream();
+             List<User> users = LogInAuthority.getInstance().getAllUsers(true);
+             for(User user : users){
+                 baos.write(UserComposer.composeUser(user));
+             }
+            bytes = baos.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                baos.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return bytes;
     }
 
     @Override

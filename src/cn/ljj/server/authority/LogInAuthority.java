@@ -3,9 +3,10 @@ package cn.ljj.server.authority;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import cn.ljj.message.User;
-import cn.ljj.server.config.Config;
 import cn.ljj.server.database.AbstractDatabase;
 import cn.ljj.server.database.DatabaseFactory;
 import cn.ljj.server.database.DatabasePersister;
@@ -20,7 +21,6 @@ public class LogInAuthority {
 
     private LogInAuthority() {
         mDatabase = DatabaseFactory.getDatabase();
-        mDatabase.open(Config.DATABASE_LOCATION);
     }
 
     public static LogInAuthority getInstance() {
@@ -76,5 +76,30 @@ public class LogInAuthority {
         String sql = "select * from " + UserColunms.TABLE_NAME + " where " + UserColunms.IDENTITY
                 + "=" + id;
         return mDatabase.rawQuery(sql, null);
+    }
+   
+    public List<User> getAllUsers(boolean noPassword){
+        List<User> users = new ArrayList<User>();
+        String sql = "select * from " + UserColunms.TABLE_NAME + ";";
+        ResultSet rs = null;
+        try {
+            rs = mDatabase.rawQuery(sql, null);
+            while(rs.next()){
+                User user = DatabasePersister.getInstance().getUser(rs);
+                if(noPassword){
+                    user.setPassword("");
+                }
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }finally{
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return users;
     }
 }

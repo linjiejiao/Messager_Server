@@ -16,7 +16,9 @@ public class DatabaseFactory {
         try {
             switch (Config.DATABASE_TYPE) {
                 case DATABASE_TYPE_SQLITE:
-                    return new SqliteDatabase();
+                    AbstractDatabase db = new SqliteDatabase();
+                    db.open(Config.DATABASE_LOCATION);
+                    return db;
                 case DATABASE_TYPE_BAIDU_MYSQL:
                     break;
             }
