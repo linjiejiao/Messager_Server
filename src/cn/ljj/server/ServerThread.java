@@ -2,6 +2,7 @@
 package cn.ljj.server;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -48,6 +49,9 @@ public class ServerThread implements Runnable, IDatabaseObserver, IUserStatusCha
             mServer = new ServerSocket();
             InetSocketAddress inetAddr = new InetSocketAddress(8888);
             mServer.bind(inetAddr);
+            Log.e(TAG, "Server is running, binding on - "
+                    + InetAddress.getLocalHost().getHostAddress()
+                    + " : " + inetAddr.getPort());
             init();
             while (isRunning) {
                 try {
