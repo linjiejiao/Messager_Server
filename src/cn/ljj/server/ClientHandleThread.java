@@ -88,10 +88,16 @@ public class ClientHandleThread implements Runnable {
     }
 
     public void stop() {
+        Log.d(TAG, "stop " + Thread.currentThread());
         isRunning = false;
+        try {
+            mSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public boolean writeToTarget(byte[] data) throws IOException {
+    synchronized public boolean writeToTarget(byte[] data) throws IOException {
         if (mOutputStream == null) {
             return false;
         }
@@ -111,8 +117,12 @@ public class ClientHandleThread implements Runnable {
                     synchronized (mClients) {
                         ClientHandleThread old = mClients.get(user.getIdentity());
                         if(old != null){
+                            // both will be log out
+                            old.respon("MULTY_LOGIN");
+                            respon("MULTY_LOGIN");
                             old.stop();
                         }
+                        Thread.currentThread().setName(user.getName() + " - " + user.getIdentity());
                         mClients.put(user.getIdentity(), this);
                     }
                     respon("LOGIN_OK");
