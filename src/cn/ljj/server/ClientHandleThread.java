@@ -109,10 +109,15 @@ public class ClientHandleThread implements Runnable {
                     mUser = user;
                     Log.d(TAG, "handleMessage MESSAGE_TYPE_LOGIN user=" + user);
                     synchronized (mClients) {
+                        ClientHandleThread old = mClients.get(user.getIdentity());
+                        if(old != null){
+                            old.stop();
+                        }
                         mClients.put(user.getIdentity(), this);
                     }
+                    respon("LOGIN_OK");
                 } else {
-                    responLoginFailed();
+                    respon("LOGIN_FAIL");
                     throw new Exception("Authorize failed");
                 }
                 break;
@@ -133,7 +138,9 @@ public class ClientHandleThread implements Runnable {
                 if (getUser().equals(newUser)) {
                     boolean update = mDatabasePersister.updateUser(newUser);
                     if (!update) {
-                        responChangeStatusFailed();
+                        respon("CHANGE_STATUS_FAIL");
+                    }else{
+                        respon("CHANGE_STATUS_OK");
                     }
                 }
                 break;
@@ -148,6 +155,7 @@ public class ClientHandleThread implements Runnable {
                 writeToTarget(data);
                 break;
             default:
+                stop();
         }
     }
 
@@ -155,20 +163,12 @@ public class ClientHandleThread implements Runnable {
         return mUser;
     }
 
-    private void responLoginFailed() {
-        respon("Login Failed");
-    }
-
-    private void responChangeStatusFailed() {
-        respon("Change status Failed");
-    }
-
     public void respon(String resp) {
         IPMessage msg = new IPMessage();
         msg.setBody(resp.getBytes());
         msg.setDate(System.currentTimeMillis() + "");
         msg.setFromId(0);
-        msg.setToId(getUser().getIdentity());
+//        msg.setToId(getUser().getIdentity()); //user is null
         msg.setMessageId(0);
         msg.setMessageIndex(++mMsgIndex);
         msg.setMessageType(IPMessage.MESSAGE_TYPE_RESPOND);

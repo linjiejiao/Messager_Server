@@ -80,7 +80,8 @@ public class LogInAuthority {
    
     public List<User> getAllUsers(boolean noPassword){
         List<User> users = new ArrayList<User>();
-        String sql = "select * from " + UserColunms.TABLE_NAME + ";";
+        String sql = "select * from " + UserColunms.TABLE_NAME
+                + " order by " + UserColunms.STATUS + " desc, " + UserColunms.IDENTITY + ";";
         ResultSet rs = null;
         try {
             rs = mDatabase.rawQuery(sql, null);

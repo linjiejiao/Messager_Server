@@ -27,6 +27,7 @@ public class ClientConnPool {
 
     public void remove(int identity) {
         ClientHandleThread client = mClients.remove(identity);
+        client.stop();
         User user = client.getUser();
         user.setStatus(User.STATUS_OFF_LINE);
         notifyUserStatusChanged(User.STATUS_ON_LINE, User.STATUS_OFF_LINE, user);
